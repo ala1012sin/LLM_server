@@ -41,7 +41,7 @@ class PineconeService:
         print(f"Dimension: {index_info.get('dimension', 1536)}")
         print(f"{'='*80}\n")
 
-        self.debug_print_all_vectors()
+        # self.debug_print_all_vectors()
 
     # ==================== 메타데이터 파싱 유틸리티 ====================
     
