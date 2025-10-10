@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import kakao_webhook
 from routers import kakao_store
 from routers import kakao_recommend
 import uvicorn
@@ -21,7 +20,6 @@ app.add_middleware(
 )
 
 # 라우터 등록
-app.include_router(kakao_webhook.router)
 app.include_router(kakao_store.router)
 app.include_router(kakao_recommend.router)
 
@@ -31,7 +29,6 @@ async def root():
         "message": "Restaurant Chatbot API",
         "version": "1.0.0",
         "endpoints": {
-            "kakao_webhook": "/kakao/webhook",
             "kakao_webhook": "/kakao/store",
             "kakao_webhook": "/kakao/recommend",
             "health": "/kakao/health"
