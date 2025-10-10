@@ -40,7 +40,7 @@ async def kakao_webhook(request: Request):
 
             if geo:
                 lat, lng = geo["lat"], geo["lng"]
-                stores = await pinecone_service.search_stores_by_location(lat, lng, radius=5.0, top_k=5)
+                stores = await pinecone_service.search_stores_by_location(lat, lng, radius_km=5.0, top_k=5)
             else:   
             # 텍스트 기반 검색: 발화 + 파라미터를 하나의 쿼리로 묶어 강화
                 terms = [utterance, sys_location, location, food]
