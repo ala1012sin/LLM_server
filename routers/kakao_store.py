@@ -27,13 +27,18 @@ async def kakao_store(request: Request):
     body = await request.json()
     user_key = body.get("userRequest", {}).get("user", {}).get("id", "")
     utterance = (body.get("userRequest", {}).get("utterance") or "").strip()
+    session = user_sessions.get(user_key)
+
+    print(session)
 
     # 상세보기 버튼에서 넘어온 extra (가게 이름)
     extra = (body.get("action") or {}).get("clientExtra") or {}
     store_name = (extra.get("store_name") or "").strip()
 
+    print(store_name)
+
     # 1) 진입 첫 호출: utterance가 비어있음 → 인사만 보내고 세션 설정
-    if not utterance:
+    if utterance and not session:
         if store_name:
             # pinecone에서 1건만 찾아 캐시(다음 턴에 LLM이 사용할 수 있도록)
             stores = await pinecone_service.search_stores_by_text(store_name, top_k=1)
@@ -50,7 +55,7 @@ async def kakao_store(request: Request):
         return kakao_service.create_text_response(text)
 
     # 2) 두 번째 이후 호출: 사용자가 질문을 함 → 세션의 가게로 답변 생성
-    session = user_sessions.get(user_key)
+
     if not session or session.get("mode") != "detail":
         # 세션 없으면 방어적으로 기본 안내
         return kakao_service.create_text_response("어떤 가게를 보고 계신가요? ‘상세보기’를 눌러 들어와 주세요.")
