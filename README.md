@@ -16,14 +16,16 @@ POST /kakao/store : 가게가 결정된 후, 해당 가게 전용 챗봇 응답
 ## 스크린에 접속
 screen -r llm
 
-# (세션 안에서) 서버 실행
+## (세션 안에서) 서버 실행
 cd LLM_server
+
 source venv/bin/activate
+
 uvicorn main:app --host 0.0.0.0 --port 8000
 
-# 세션에서 빠져나오기 (백그라운드 유지)
+## 세션에서 빠져나오기 (백그라운드 유지)
 Ctrl + A  누르고  D
 
 
-# 실행 중인 세션 목록
+## 실행 중인 세션 목록
 screen -ls
