@@ -1,4 +1,4 @@
-LLM_server
+# LLM_server
 
 카카오 오픈빌더용 FastAPI 서버.
 Azure VM(Ubuntu)에서 uvicorn + screen으로 24시간 운영.
@@ -13,7 +13,7 @@ POST /kakao/store : 가게가 결정된 후, 해당 가게 전용 챗봇 응답
 
 현재 서버 주소: http://20.210.192.6:8000
 
-# 스크린에 접속
+## 스크린에 접속
 screen -r llm
 
 # (세션 안에서) 서버 실행
