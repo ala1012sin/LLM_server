@@ -1,4 +1,7 @@
 from fastapi import APIRouter, Request
+import asyncio
+import httpx
+import uuid
 from typing import Dict, Any, List
 from services.pinecone_service import PineconeService
 from services.openai_service import OpenAIService
@@ -80,6 +83,66 @@ async def kakao_store(request: Request):
     # 빈 발화 방지(버튼 라벨만 들어오거나 공백만 있을 때)
     if not utterance:
         return kakao_service.create_text_response("무엇을 도와드릴까요? (예: 영업시간 알려줘)")
+
+    # 콜백 플로우 지원: 카카오가 전달한 callbackUrl이 있으면
+    # 1) 즉시 useCallback:true를 반환 (5초 SLA 회피)
+    # 2) 백그라운드에서 LLM을 호출해 callbackUrl로 최종 응답을 POST
+    callback_url = body.get("userRequest", {}).get("callbackUrl") or body.get("userRequest", {}).get("callback_url")
+
+    if callback_url:
+        # 즉시 반환할 메시지(개발자 문서 예시를 따름)
+        placeholder = ""
+
+        # schedule background task to generate final reply and POST to callback_url
+        task_id = str(uuid.uuid4())
+
+        async def _generate_and_post_callback(cb_url: str, store_info: dict, user_msg: str, history: list, ukey: str, tid: str):
+            try:
+                # Generate reply (may take time)
+                reply_text = await openai_service.generate_store_response(store_info, user_msg, history)
+
+                # Update session chat history
+                try:
+                    h = user_sessions.get(ukey, {}).get("chat_history", [])
+                    h.extend([
+                        {"role": "user", "content": user_msg},
+                        {"role": "assistant", "content": reply_text},
+                    ])
+                    if ukey in user_sessions:
+                        user_sessions[ukey]["chat_history"] = h[-10:]
+                except Exception as _:
+                    print(f"[WARN] failed to update session chat_history for user={ukey}")
+
+                # Build callback payload (skill response format) - user will see this
+                payload = {
+                    "version": "2.0",
+                    "template": {
+                        "outputs": [
+                            {"simpleText": {"text": reply_text}}
+                        ]
+                    }
+                }
+
+                # POST to callback URL
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    r = await client.post(cb_url, json=payload)
+                    if r.status_code >= 200 and r.status_code < 300:
+                        print(f"[CALLBACK:{tid}] posted successfully to callbackUrl for user={ukey}")
+                    else:
+                        print(f"[CALLBACK:{tid}] callback POST returned status={r.status_code} body={r.text}")
+            except Exception as e:
+                print(f"[ERROR][CALLBACK:{tid}] failed to generate/post callback reply:", e)
+
+        # fire-and-forget
+        asyncio.create_task(_generate_and_post_callback(callback_url, store, utterance, chat_history, user_key, task_id))
+
+        # return initial useCallback response (no template field when useCallback true, include data if desired)
+        resp = {
+            "version": "2.0",
+            "useCallback": True,
+            "data": {"text": placeholder}
+        }
+        return resp
 
     # LLM 호출 (룰/FAQ 선처리하고 싶으면 여기서 분기)
     try:
